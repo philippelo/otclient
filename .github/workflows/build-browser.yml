@@ -3,22 +3,25 @@ name: Build - Emscripten
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
 
 jobs:
-  job:
+  build:
     name: ${{ matrix.buildtype }}
     runs-on: ubuntu-latest
+
+    concurrency:
+      group: otclient-emscripten-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
 
     strategy:
       fail-fast: false
       matrix:
-        buildtype: [emscripten-release, emscripten-debug]
+        buildtype: [emscripten-debug]
         include:
-          - buildtype: emscripten-release
-            cmake_build_type: Release
           - buildtype: emscripten-debug
             cmake_build_type: Debug
 
@@ -41,9 +44,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg/archives
-          key: vcpkg-binary-cache-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}-${{ matrix.buildtype }}
+          key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
           restore-keys: |
-            vcpkg-binary-cache-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}-
+            vcpkg-bin-${{ matrix.buildtype }}-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -57,9 +60,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/build-${{ matrix.buildtype }}
-          key: cmake-cache-${{ github.sha }}-${{ matrix.buildtype }}
+          key: cmake-dir-${{ matrix.buildtype }}
           restore-keys: |
-            cmake-cache-${{ github.sha }}-${{ matrix.buildtype }}-
+            cmake-dir-${{ matrix.buildtype }}
 
       - name: Configure CMake
         run: |

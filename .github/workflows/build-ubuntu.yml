@@ -64,13 +64,19 @@ jobs:
           fi
           sudo update-alternatives --set gcc /usr/bin/gcc
 
+      - name: Extract vcpkg commit ID
+        id: vcpkg-step
+        run: |
+          vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
+          echo "VCPKG_GIT_COMMIT_ID=$vcpkgCommitId" >> "$GITHUB_ENV"
+
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
         with:
           path: build/vcpkg_installed
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-${{ env.VCPKG_GIT_COMMIT_ID }}
           restore-keys: |
-            ${{ runner.os }}-vcpkg-
+            vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-
 
       - name: CCache
         uses: hendrikmuhs/ccache-action@main
@@ -78,13 +84,7 @@ jobs:
           max-size: "1G"
           key: ccache-${{ matrix.os }}-${{ matrix.buildtype }}
           restore-keys: |
-            ccache-${{ matrix.os }}
-
-      - name: Extract vcpkg commit ID
-        id: vcpkg-step
-        run: |
-          vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
-          echo "VCPKG_GIT_COMMIT_ID=$vcpkgCommitId" >> "$GITHUB_ENV"
+            ccache-${{ matrix.os }}-${{ matrix.buildtype }}
 
       - name: Install vcpkg with baseline
         uses: lukka/run-vcpkg@main

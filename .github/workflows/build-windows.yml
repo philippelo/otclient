@@ -57,18 +57,10 @@ jobs:
           variant: "sccache"
           key: ccache-${{ matrix.os }}-${{ matrix.buildtype }}
           restore-keys: |
-            ccache-${{ matrix.os }}
+            ccache-${{ matrix.os }}-${{ matrix.buildtype }}
 
       - name: Remove Windows pre-installed MySQL (for clean builds)
         run: Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "C:/mysql*"
-
-      - name: Cache vcpkg installed packages
-        uses: actions/cache@v4
-        with:
-          path: build/vcpkg_installed
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-
 
       - name: Extract vcpkg commit ID
         id: vcpkg-step
@@ -77,6 +69,14 @@ jobs:
           $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
           $commit = $json.'builtin-baseline'
           "VCPKG_GIT_COMMIT_ID=$commit" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: build/vcpkg_installed
+          key: vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-
 
       - name: Install vcpkg with baseline
         uses: lukka/run-vcpkg@main
