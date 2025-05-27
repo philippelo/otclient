@@ -87,4 +87,22 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@main
 
-      - name: Run CMake
+      - name: Run CMake Preset
+        uses: lukka/run-cmake@main
+        with:
+          configurePreset: ${{ matrix.buildtype }}
+          buildPreset: ${{ matrix.buildtype }}
+
+      - name: Upload Executable Artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/otclient.exe
+
+      - name: Upload DLLs
+        uses: actions/upload-artifact@main
+        with:
+          name: otclient-dlls-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/*.dll
