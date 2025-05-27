@@ -6,9 +6,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"
+      - ".github/workflows/build-emscripten.yml"
   push:
     paths:
       - "src/**"
+      - ".github/workflows/build-emscripten.yml"
     branches:
       - main
 
@@ -18,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     concurrency:
-      group: otclient-emscripten-${{ github.workflow }}-${{ github.ref }}
+      group: otclient-emscripten-${{ github.workflow }}-${{ github.ref }}-${{ matrix.buildtype }}
       cancel-in-progress: true
 
     strategy:

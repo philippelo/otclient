@@ -6,10 +6,12 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"
+      - ".github/workflows/build-windows.yml"
   merge_group:
   push:
     paths:
       - "src/**"
+      - ".github/workflows/build-windows.yml"
     branches:
       - main
 
@@ -33,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     concurrency:
-      group: otclient-${{ github.workflow }}-${{ github.ref }}
+      group: otclient-${{ github.workflow }}-${{ github.ref }}-${{ matrix.buildtype }}
       cancel-in-progress: true
 
     strategy:

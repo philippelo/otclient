@@ -6,12 +6,14 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"
+      - ".github/workflows/build-ubuntu.yml"
   merge_group:
   push:
-    paths:
-      - "src/**"
     branches:
       - main
+    paths:
+      - "src/**"
+      - ".github/workflows/build-ubuntu.yml"
 
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 2
@@ -33,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     concurrency:
-      group: otclient-${{ github.workflow }}-${{ github.ref }}
+      group: otclient-${{ github.workflow }}-${{ github.ref }}-${{ matrix.buildtype }}
       cancel-in-progress: true
 
     strategy:
@@ -54,15 +56,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ccache linux-headers-$(uname -r)
 
-      - name: Switch to GCC based on OS
+      - name: Switch to GCC 14
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          if [[ "${{ matrix.os }}" == "ubuntu-24.04" ]]; then
-            sudo apt install -y gcc-14 g++-14
-            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 --slave /usr/bin/g++ g++ /usr/bin/g++-14
-          fi
-          sudo update-alternatives --set gcc /usr/bin/gcc
+          sudo apt-get install -y gcc-14 g++-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+          sudo update-alternatives --set gcc /usr/bin/gcc-14
+          sudo update-alternatives --set g++ /usr/bin/g++-14
 
       - name: Extract vcpkg commit ID
         id: vcpkg-step
