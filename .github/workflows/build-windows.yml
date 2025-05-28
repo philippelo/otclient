@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
       - name: CCache with SCCACHE
         uses: hendrikmuhs/ccache-action@main
