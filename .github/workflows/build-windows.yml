@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@main
 
       - name: CCache with SCCACHE
         uses: hendrikmuhs/ccache-action@main
@@ -87,7 +87,7 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
 
       - name: Get latest CMake and Ninja
-        uses: lukka/get-cmake@main
+        uses: lukka/get-cmake@v3.31.6
 
       - name: Run CMake Preset
         uses: lukka/run-cmake@main
