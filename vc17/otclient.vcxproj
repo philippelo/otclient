@@ -672,9 +672,12 @@
   <PropertyGroup Condition="'$(GITHUB_WORKSPACE)' != ''">
     <RunProtoCompile>false</RunProtoCompile>
   </PropertyGroup>
+  <Target Name="DisplayRunProtoCompileValue" BeforeTargets="ProtoCompile">
+    <Message Text="RunProtoCompile value: $(RunProtoCompile)" Importance="high" />
+  </Target>
   <PropertyGroup Condition="'$(RunProtoCompile)'=='true'">
     <ProtocPath>$(ProjectDir)vcpkg_installed\$(VcpkgTriplet)\tools\protobuf\protoc</ProtocPath>
-    <ProtoPath>$(SourcePath)protobuf</ProtoPath>
+    <ProtoPath>..\$(SourcePath)\protobuf</ProtoPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RunProtoCompile)'=='false'">
     <ProtocPath>$(ProjectDir)vcpkg_installed\$(VcpkgTriplet)\tools\protobuf\protoc</ProtocPath>
@@ -683,11 +686,8 @@
   <ItemGroup>
     <ProtoFiles Include="$(ProtoPath)\*.proto" />
   </ItemGroup>
-  <Target Name="ProtoCompile" BeforeTargets="PrepareForBuild"
-    Condition="'$(GITHUB_WORKSPACE)' == ''"
-    DependsOnTargets="VcpkgInstallManifestDependencies">
-    <MakeDir Directories="$(ProjectDir)generated" />
-    <Exec Command="$(ProtocPath) --proto_path=$(ProtoPath) --cpp_out=generated $(ProtoPath)\*.proto" />
+  <Target Name="ProtoCompile" BeforeTargets="PrepareForBuild" DependsOnTargets="VcpkgInstallManifestDependencies">
+    <Exec Command="$(ProtocPath) --proto_path=$(ProtoPath) --cpp_out=generated %(ProtoFiles.Identity)" />
     <ItemGroup>
       <ClCompile Include="generated\%(ProtoFiles.Filename).pb.cc">
         <IncludeInUnityFile>false</IncludeInUnityFile>
