@@ -72,15 +72,18 @@ jobs:
           $commit = $json.'builtin-baseline'
           "VCPKG_GIT_COMMIT_ID=$commit" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Cache vcpkg installed packages
-        uses: actions/cache@v4
-        with:
-          path: build/vcpkg_installed
-          key: vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-${{ env.VCPKG_GIT_COMMIT_ID }}
-          restore-keys: |
-            vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-
+      - name: Install vcpkg (for MSBuild)
+        if: ${{ matrix.buildtype == 'windows-debug' }}
+        shell: pwsh
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          git checkout $env:VCPKG_GIT_COMMIT_ID
+          .\bootstrap-vcpkg.bat
+          .\vcpkg integrate install
 
-      - name: Install vcpkg with baseline
+      - name: Install vcpkg (for CMake)
+        if: ${{ matrix.buildtype == 'windows-release' }}
         uses: lukka/run-vcpkg@main
         with:
           vcpkgGitURL: "https://github.com/microsoft/vcpkg.git"
