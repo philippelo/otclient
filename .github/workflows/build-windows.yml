@@ -95,6 +95,8 @@ jobs:
 
       - name: Build using CMake or MSBuild
         shell: pwsh
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
           if ("${{ matrix.buildtype }}" -eq "windows-release") {
             cmake --preset ${{ matrix.buildtype }}
