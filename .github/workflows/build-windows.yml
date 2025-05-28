@@ -52,6 +52,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Extract vcpkg commit ID
+        id: vcpkg-step
+        shell: pwsh
+        run: |
+          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $commit = $json.'builtin-baseline'
+          "VCPKG_GIT_COMMIT_ID=$commit" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: build/vcpkg_installed
+          key: vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-
+
       - name: CCache with SCCACHE
         uses: hendrikmuhs/ccache-action@main
         with:
@@ -63,14 +79,6 @@ jobs:
 
       - name: Remove Windows pre-installed MySQL (for clean builds)
         run: Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "C:/mysql*"
-
-      - name: Extract vcpkg commit ID
-        id: vcpkg-step
-        shell: pwsh
-        run: |
-          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
-          $commit = $json.'builtin-baseline'
-          "VCPKG_GIT_COMMIT_ID=$commit" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install vcpkg (for MSBuild)
         if: ${{ matrix.buildtype == 'windows-debug' }}
@@ -96,25 +104,25 @@ jobs:
         if: ${{ matrix.buildtype == 'windows-debug' }}
         uses: microsoft/setup-msbuild@v1.1
 
-      - name: Build using CMake or MSBuild
+      - name: Configure and Build (CMake)
+        if: ${{ matrix.buildtype == 'windows-release' }}
+        uses: lukka/run-cmake@main
+        with:
+          configurePreset: ${{ matrix.buildtype }}
+          buildPreset: ${{ matrix.buildtype }}
+
+      - name: Build with MSBuild
+        if: ${{ matrix.buildtype == 'windows-debug' }}
         shell: pwsh
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
-          if ("${{ matrix.buildtype }}" -eq "windows-release") {
-            cmake --preset ${{ matrix.buildtype }}
-            cmake --build --preset ${{ matrix.buildtype }}
-          } elseif ("${{ matrix.buildtype }}" -eq "windows-debug") {
-            msbuild.exe vc17/otclient.sln `
-              /p:VcpkgEnableManifest=true `
-              /p:Configuration=Debug `
-              /p:Platform=x64 `
-              /p:GITHUB_WORKSPACE="$env:GITHUB_WORKSPACE" `
-              /m
-          } else {
-            Write-Host "Unknown buildtype: ${{ matrix.buildtype }}"
-            exit 1
-          }
+          msbuild.exe vc17/otclient.sln `
+            /p:VcpkgEnableManifest=true `
+            /p:Configuration=Debug `
+            /p:Platform=x64 `
+            /p:GITHUB_WORKSPACE="$env:GITHUB_WORKSPACE" `
+            /m
 
       - name: Upload Executable Artifact (CMake)
         if: ${{ matrix.buildtype == 'windows-release' }}
