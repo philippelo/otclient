@@ -666,6 +666,9 @@
   <ItemGroup>
     <ResourceCompile Include="..\src\otcicon.rc" />
   </ItemGroup>
+  <Target Name="EnsureGeneratedDirectoryExists" BeforeTargets="ProtoCompile">
+    <MakeDir Directories="generated" />
+  </Target>
   <PropertyGroup>
     <RunProtoCompile>true</RunProtoCompile>
   </PropertyGroup>
