@@ -89,11 +89,18 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@v3.31.6
 
-      - name: Run CMake Preset
-        uses: lukka/run-cmake@main
-        with:
-          configurePreset: ${{ matrix.buildtype }}
-          buildPreset: ${{ matrix.buildtype }}
+      - name: Build using CMake or MSBuild
+        run: |
+          if ("${{ matrix.buildtype }}" -eq "windows-release") {
+            cmake --preset windows-release
+            cmake --build --preset windows-release
+          } elseif ("${{ matrix.buildtype }}" -eq "windows-debug") {
+            msbuild vc17/otclient.sln /p:Configuration=Debug /p:Platform=x64 /m
+          } else {
+            Write-Host "Unknown buildtype: ${{ matrix.buildtype }}"
+            exit 1
+          }
+        shell: pwsh
 
       - name: Upload Executable Artifact
         uses: actions/upload-artifact@main
