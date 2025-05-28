@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Cancel Previous Runs
-        uses: lukka/get-cmake@v3.31.6
+        uses: styfle/cancel-workflow-action@0.9.1
         with:
           access_token: ${{ github.token }}
 
@@ -89,29 +89,39 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@v3.31.6
 
+      - name: Setup MSBuild
+        if: ${{ matrix.buildtype == 'windows-debug' }}
+        uses: microsoft/setup-msbuild@v1.1
+
       - name: Build using CMake or MSBuild
+        shell: pwsh
         run: |
           if ("${{ matrix.buildtype }}" -eq "windows-release") {
-            cmake --preset windows-release
-            cmake --build --preset windows-release
+            cmake --preset ${{ matrix.buildtype }}
+            cmake --build --preset ${{ matrix.buildtype }}
           } elseif ("${{ matrix.buildtype }}" -eq "windows-debug") {
-            msbuild vc17/otclient.sln /p:Configuration=Debug /p:Platform=x64 /m
+            msbuild.exe vc17/otclient.sln `
+              /p:VcpkgEnableManifest=true `
+              /p:Configuration=Debug `
+              /p:Platform=x64 `
+              /m
           } else {
             Write-Host "Unknown buildtype: ${{ matrix.buildtype }}"
             exit 1
           }
-        shell: pwsh
 
-      - name: Upload Executable Artifact
+      - name: Upload Executable Artifact (CMake)
+        if: ${{ matrix.buildtype == 'windows-release' }}
         uses: actions/upload-artifact@main
         with:
           name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
           path: |
             ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/otclient.exe
 
-      - name: Upload DLLs
+      - name: Upload Executable Artifact (MSBuild)
+        if: ${{ matrix.buildtype == 'windows-debug' }}
         uses: actions/upload-artifact@main
         with:
-          name: otclient-dlls-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
+          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
           path: |
-            ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/*.dll
+            ${{ github.workspace }}/vc17/otclient.exe
