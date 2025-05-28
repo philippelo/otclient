@@ -89,11 +89,6 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@main
 
-      - name: Install Ninja
-        uses: crazy-max/ghaction-chocolatey@v2
-        with:
-          args: install ninja --no-progress
-
       - name: Run CMake Preset
         uses: lukka/run-cmake@main
         with:
