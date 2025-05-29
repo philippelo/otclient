@@ -52,21 +52,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract vcpkg commit ID
+      - name: Get vcpkg commit ID
         id: vcpkg-step
-        shell: pwsh
         run: |
-          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
-          $commit = $json.'builtin-baseline'
-          "VCPKG_GIT_COMMIT_ID=$commit" | Out-File -FilePath $env:GITHUB_ENV -Append
+          vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
+          echo "vcpkgGitCommitId=$vcpkgCommitId" >> $GITHUB_OUTPUT
 
-      - name: Cache vcpkg installed packages
+      - name: Cache vcpkg binary artifacts
         uses: actions/cache@v4
         with:
-          path: build/vcpkg_installed
-          key: vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+          path: ~/.cache/vcpkg/archives
+          key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
           restore-keys: |
-            vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-
+            vcpkg-bin-${{ matrix.buildtype }}-
 
       - name: CCache with SCCACHE
         uses: hendrikmuhs/ccache-action@main
@@ -86,7 +84,7 @@ jobs:
         run: |
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
-          git checkout $env:VCPKG_GIT_COMMIT_ID
+          git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
           .\bootstrap-vcpkg.bat
           .\vcpkg integrate install
 
@@ -95,7 +93,7 @@ jobs:
         uses: lukka/run-vcpkg@main
         with:
           vcpkgGitURL: "https://github.com/microsoft/vcpkg.git"
-          vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
+          vcpkgGitCommitId: ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
 
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@v3.31.6

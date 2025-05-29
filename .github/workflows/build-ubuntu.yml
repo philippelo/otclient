@@ -46,6 +46,7 @@ jobs:
         include:
           - os: ubuntu-24.04
             triplet: x64-linux
+            cmake_build_type: Debug
 
     steps:
       - name: Checkout repository
@@ -54,57 +55,62 @@ jobs:
       - name: Install Linux Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ccache linux-headers-$(uname -r)
+          sudo apt-get install -y ccache gcc-14 g++-14 linux-headers-$(uname -r)
 
       - name: Switch to GCC 14
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-14 g++-14
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
           sudo update-alternatives --set gcc /usr/bin/gcc-14
           sudo update-alternatives --set g++ /usr/bin/g++-14
 
-      - name: Extract vcpkg commit ID
+      - name: Get vcpkg commit ID
         id: vcpkg-step
         run: |
           vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
-          echo "VCPKG_GIT_COMMIT_ID=$vcpkgCommitId" >> "$GITHUB_ENV"
+          echo "vcpkgGitCommitId=$vcpkgCommitId" >> $GITHUB_OUTPUT
 
-      - name: Cache vcpkg installed packages
+      - name: Cache vcpkg binary artifacts
         uses: actions/cache@v4
         with:
-          path: build/vcpkg_installed
-          key: vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-${{ env.VCPKG_GIT_COMMIT_ID }}
+          path: ~/.cache/vcpkg/archives
+          key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
           restore-keys: |
-            vcpkg-installed-${{ matrix.os }}-${{ matrix.buildtype }}-
+            vcpkg-bin-${{ matrix.buildtype }}-
 
-      - name: CCache
-        uses: hendrikmuhs/ccache-action@main
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
         with:
-          max-size: "1G"
-          key: ccache-${{ matrix.os }}-${{ matrix.buildtype }}
-          restore-keys: |
-            ccache-${{ matrix.os }}-${{ matrix.buildtype }}
+          vcpkgGitCommitId: ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
 
-      - name: Install vcpkg with baseline
-        uses: lukka/run-vcpkg@main
-        with:
-          vcpkgGitURL: "https://github.com/microsoft/vcpkg.git"
-          vcpkgGitCommitId: ${{ env.VCPKG_GIT_COMMIT_ID }}
-
-      - name: Get latest CMake and Ninja
+      - name: Install CMake and Ninja
         uses: lukka/get-cmake@v3.31.6
 
-      - name: Run CMake Preset
-        uses: lukka/run-cmake@main
+      - name: Cache CMake build directory
+        uses: actions/cache@v4
         with:
-          configurePreset: ${{ matrix.buildtype }}
-          buildPreset: ${{ matrix.buildtype }}
+          path: ${{ github.workspace }}/build-${{ matrix.buildtype }}
+          key: cmake-dir-${{ matrix.buildtype }}
+          restore-keys: |
+            cmake-dir-${{ matrix.buildtype }}
+
+      - name: Configure and Build
+        run: |
+          cmake -G Ninja -S . -B build-${{ matrix.buildtype }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }} \
+            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+            -DTOGGLE_BIN_FOLDER=ON \
+            -DOPTIONS_ENABLE_IPO=OFF \
+            -DTOGGLE_BOT_PROTECTION=OFF \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++
+
+          cmake --build build-${{ matrix.buildtype }} --target otclient
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
           path: |
-            ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/
+            ${{ github.workspace }}/build-${{ matrix.buildtype }}/bin/
