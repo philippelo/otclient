@@ -45,7 +45,7 @@ jobs:
         buildtype: [windows-release, windows-debug]
         include:
           - os: windows-2022
-            triplet: x64-windows-static
+            triplet: x64-windows
             packages: sccache
 
     steps:
@@ -60,17 +60,6 @@ jobs:
           $commit = $json.'builtin-baseline'
           echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
 
-      - name: Cache vcpkg binary artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/vcpkg/archives
-            vcpkg/archives
-            vcpkg/downloads
-          key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
-          restore-keys: |
-            vcpkg-bin-${{ matrix.buildtype }}-
-
       - name: CCache with SCCACHE
         uses: hendrikmuhs/ccache-action@main
         with:
@@ -83,15 +72,13 @@ jobs:
       - name: Remove Windows pre-installed MySQL (for clean builds)
         run: Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "C:/mysql*"
 
-      - name: Install vcpkg (for MSBuild)
+      - name: Setup vcpkg (MSBuild)
         if: ${{ matrix.buildtype == 'windows-debug' }}
-        shell: pwsh
-        run: |
-          git clone https://github.com/Microsoft/vcpkg.git
-          cd vcpkg
-          git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
-          .\bootstrap-vcpkg.bat
-          .\vcpkg integrate install
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          runVcpkgInstall: true
+          vcpkgJsonGlob: 'vcpkg.json'
 
       - name: Install vcpkg (for CMake)
         if: ${{ matrix.buildtype == 'windows-release' }}
