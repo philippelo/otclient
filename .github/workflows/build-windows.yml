@@ -54,9 +54,11 @@ jobs:
 
       - name: Get vcpkg commit ID
         id: vcpkg-step
+        shell: pwsh
         run: |
-          vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
-          echo "vcpkgGitCommitId=$vcpkgCommitId" >> $GITHUB_OUTPUT
+          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $commit = $json.'builtin-baseline'
+          echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
 
       - name: Cache vcpkg binary artifacts
         uses: actions/cache@v4
