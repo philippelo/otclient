@@ -73,7 +73,9 @@ jobs:
       - name: Cache vcpkg binary artifacts
         uses: actions/cache@v4
         with:
-          path: ~/.cache/vcpkg/archives
+          path: |
+            ~/.cache/vcpkg/archives
+            ${{ github.workspace }}/vcpkg/downloads
           key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
           restore-keys: |
             vcpkg-bin-${{ matrix.buildtype }}-
