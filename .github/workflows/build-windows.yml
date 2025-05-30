@@ -85,15 +85,15 @@ jobs:
 
       - name: Install vcpkg (for MSBuild)
         if: ${{ matrix.buildtype == 'windows-debug' }}
-        shell: cmd
+        shell: pwsh
         run: |
           IF NOT EXIST vcpkg (
             git clone https://github.com/Microsoft/vcpkg.git
           )
           cd vcpkg
           git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
-          bootstrap-vcpkg.bat
-          vcpkg integrate install
+          .\bootstrap-vcpkg.bat
+          .\vcpkg integrate install
 
       - name: Install vcpkg (for CMake)
         if: ${{ matrix.buildtype == 'windows-release' }}
