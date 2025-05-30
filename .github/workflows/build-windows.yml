@@ -87,13 +87,11 @@ jobs:
         if: ${{ matrix.buildtype == 'windows-debug' }}
         shell: pwsh
         run: |
-          if (-not (Test-Path "./vcpkg")) {
-            git clone https://github.com/Microsoft/vcpkg.git
-          }
-          Set-Location vcpkg
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
           git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
-          & "./bootstrap-vcpkg.bat"
-          & "./vcpkg" integrate install
+          .\bootstrap-vcpkg.bat
+          .\vcpkg integrate install
 
       - name: Install vcpkg (for CMake)
         if: ${{ matrix.buildtype == 'windows-release' }}
