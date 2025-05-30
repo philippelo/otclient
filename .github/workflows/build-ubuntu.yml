@@ -55,7 +55,8 @@ jobs:
       - name: Install Linux Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ccache gcc-14 g++-14 linux-headers-$(uname -r)
+          sudo apt-get install -y ccache gcc-14 g++-14 libglew-dev libx11-dev linux-headers-$(uname -r)
+          - name: Install Linux dependencies
 
       - name: Switch to GCC 14
         run: |
