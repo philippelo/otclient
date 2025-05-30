@@ -110,6 +110,10 @@ jobs:
 
           cmake --build build-${{ matrix.buildtype }} --target otclient
 
+      - name: Check otclient.exe path
+        run: Get-ChildItem -Recurse -Filter "otclient*.exe"
+        shell: pwsh
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
