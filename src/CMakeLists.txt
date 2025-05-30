@@ -690,6 +690,9 @@ else() # Linux
 		OpenSSL::Crypto
 		httplib::httplib
 		fmt::fmt-header-only
+		Ogg::ogg
+		Vorbis::vorbisfile
+		Vorbis::vorbis
 	)
 
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
