@@ -51,8 +51,11 @@ jobs:
         id: hash
         shell: pwsh
         run: |
-          $bytes = Get-Content vcpkg.json -Raw -Encoding UTF8 | [System.Text.Encoding]::UTF8.GetBytes()
-          $hash = [System.BitConverter]::ToString((New-Object System.Security.Cryptography.SHA256Managed).ComputeHash($bytes)) -replace '-', ''
+          $json = Get-Content "vcpkg.json" -Raw -Encoding UTF8
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+          $sha256 = [System.Security.Cryptography.SHA256]::Create()
+          $hashBytes = $sha256.ComputeHash($bytes)
+          $hash = [BitConverter]::ToString($hashBytes) -replace '-', ''
           "hash=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Cache vcpkg artifacts
