@@ -60,6 +60,17 @@ jobs:
           $commit = $json.'builtin-baseline'
           echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
 
+            - name: Cache vcpkg artifacts (Windows)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/buildtrees
+            ${{ github.workspace }}/vcpkg/downloads
+          key: vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          restore-keys: |
+            vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-
+
       - name: CCache with SCCACHE
         uses: hendrikmuhs/ccache-action@main
         with:
@@ -90,7 +101,6 @@ jobs:
           buildPreset: ${{ matrix.buildtype }}
 
       - name: Prepare artifact folder
-        if: ${{ matrix.buildtype == 'Debug' }}
         shell: pwsh
         run: |
           $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
@@ -111,10 +121,8 @@ jobs:
           }
 
       - name: Upload Executable Artifact (MSBuild)
-        if: ${{ matrix.buildtype == 'Debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}
           path: |
             ${{ github.workspace }}/artifacts
-
