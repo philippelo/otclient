@@ -89,10 +89,32 @@ jobs:
           configurePreset: ${{ matrix.buildtype }}
           buildPreset: ${{ matrix.buildtype }}
 
-      - name: Upload Executable Artifact
-        if: ${{ matrix.buildtype == 'windows-release' }}
-        uses: actions/upload-artifact@main
+      - name: Prepare artifact folder
+        if: ${{ matrix.buildtype == 'Debug' }}
+        shell: pwsh
+        run: |
+          $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          $exePath = Get-ChildItem -Recurse -Path $env:GITHUB_WORKSPACE -Filter "otclient*.exe" | Select-Object -First 1
+
+          if (-not $exePath) {
+            Write-Error "Not found otclient*.exe!"
+            exit 1
+          }
+
+          Copy-Item $exePath.FullName -Destination $artifactDir
+
+          $dlls = Get-ChildItem -Path $exePath.Directory.FullName -Filter "*.dll"
+          foreach ($dll in $dlls) {
+            Copy-Item $dll.FullName -Destination $artifactDir
+          }
+
+      - name: Upload Executable Artifact (MSBuild)
+        if: ${{ matrix.buildtype == 'Debug' }}
+        uses: actions/upload-artifact@v4
         with:
-          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
+          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}
           path: |
-            ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/otclient.exe
+            ${{ github.workspace }}/artifacts
+

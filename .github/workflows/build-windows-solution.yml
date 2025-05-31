@@ -83,10 +83,32 @@ jobs:
             /p:Platform=x64 `
             /m
 
-      - name: Upload artifacts
+      - name: Prepare artifact folder
+        if: ${{ matrix.buildtype == 'Debug' }}
+        shell: pwsh
+        run: |
+          $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          $exePath = Get-ChildItem -Recurse -Path $env:GITHUB_WORKSPACE -Filter "otclient*.exe" | Select-Object -First 1
+
+          if (-not $exePath) {
+            Write-Error "Not found otclient*.exe!"
+            exit 1
+          }
+
+          Copy-Item $exePath.FullName -Destination $artifactDir
+
+          $dlls = Get-ChildItem -Path $exePath.Directory.FullName -Filter "*.dll"
+          foreach ($dll in $dlls) {
+            Copy-Item $dll.FullName -Destination $artifactDir
+          }
+
+      - name: Upload Executable Artifact (MSBuild)
+        if: ${{ matrix.buildtype == 'Debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}
           path: |
-            ${{ github.workspace }}/vc17/*.exe
-            ${{ github.workspace }}/vc17/*.dll
+            ${{ github.workspace }}/artifacts
+
