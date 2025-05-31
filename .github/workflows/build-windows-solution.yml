@@ -59,12 +59,7 @@ jobs:
       working-directory: vcpkg
 
     - name: MSBuild (manifest mode)
-      run: msbuild.exe vc17/otclient.sln ^
-            /p:Configuration=Debug ^
-            /p:Platform=x64 ^
-            /p:VcpkgEnableManifest=true ^
-            /p:VcpkgRoot=${{ github.workspace }}\vcpkg ^
-            /m
+      run: msbuild.exe vc17/otclient.sln /m /p:Configuration=Debug /p:Platform=x64 /p:VcpkgEnableManifest=true /p:VcpkgRoot=${{ github.workspace }}\vcpkg
 
     - name: Prepare & upload artifacts
       shell: pwsh
