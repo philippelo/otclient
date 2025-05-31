@@ -70,7 +70,7 @@ jobs:
         shell: cmd
         run: |
           if not exist vcpkg (
-            git clone https://github.com/Microsoft/vcpkg.git
+            git clone https://github.com/Microsoft/vcpkg.git --no-single-branch
           )
           cd vcpkg
           git reset --hard ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
