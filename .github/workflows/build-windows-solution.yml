@@ -1,4 +1,4 @@
-name: Build - Windows - Solution (cached)
+name: Build - Windows - Solution
 
 on:
   workflow_dispatch:
@@ -45,20 +45,26 @@ jobs:
         restore-keys: |
           vcpkg-${{ matrix.triplet }}-
 
-    - name: Bootstrap vcpkg + install deps (manifest mode)
+    - name: Clone + bootstrap vcpkg
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
         .\bootstrap-vcpkg.bat
 
-    - name: Build solution
+    - name: Resolve manifest deps (cria installed/)
       run: |
-        msbuild.exe vc17/otclient.sln `
-          /p:Configuration=${{ matrix.buildtype }} `
-          /p:Platform=x64 `
-          /p:VcpkgEnableManifest=true `
-          /p:VcpkgRoot=${{ github.workspace }}\vcpkg `
-          /m
+        .\vcpkg.exe install --triplet x64-windows `
+            "--x-manifest-root=${{ github.workspace }}" `
+            --feature-flags=manifests,registries
+      working-directory: vcpkg
+
+    - name: MSBuild (manifest mode)
+      run: msbuild.exe vc17/otclient.sln ^
+            /p:Configuration=Debug ^
+            /p:Platform=x64 ^
+            /p:VcpkgEnableManifest=true ^
+            /p:VcpkgRoot=${{ github.workspace }}\vcpkg ^
+            /m
 
     - name: Prepare & upload artifacts
       shell: pwsh
