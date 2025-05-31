@@ -47,46 +47,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@main
 
-      - name: Get vcpkg commit ID
-        id: vcpkg-step
-        shell: pwsh
-        run: |
-          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
-          $commit = $json.'builtin-baseline'
-          echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
-
       - name: Install vcpkg
-        shell: bash
         run: |
-          rm -rf vcpkg
-          git clone https://github.com/Microsoft/vcpkg.git --no-single-branch
+          git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
-          git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
           ./bootstrap-vcpkg.bat
-
-      - name: Restore vcpkg cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/vcpkg/archives
-            vcpkg/archives
-            vcpkg/downloads
-          key: vcpkg-bin-${{ matrix.buildtype }}
-          restore-keys: |
-            vcpkg-bin-
+          ./vcpkg integrate install
 
       - name: Build project
         run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
 
-      - name: Save vcpkg cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/vcpkg/archives
-            vcpkg/archives
-            vcpkg/downloads
-          key: vcpkg-bin-${{ matrix.buildtype }}
+      - name: Build project
+        run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
 
       - name: Prepare artifact folder
         if: ${{ matrix.buildtype == 'Debug' }}
