@@ -42,10 +42,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-2022]
-        buildtype: [windows-release, windows-debug]
+        buildtype: [windows-release]
         include:
           - os: windows-2022
-            triplet: x64-windows
+            triplet: x64-windows-static
             packages: sccache
 
     steps:
@@ -72,15 +72,7 @@ jobs:
       - name: Remove Windows pre-installed MySQL (for clean builds)
         run: Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "C:/mysql*"
 
-      - name: Setup vcpkg (MSBuild)
-        if: ${{ matrix.buildtype == 'windows-debug' }}
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
-          runVcpkgInstall: true
-          vcpkgJsonGlob: 'vcpkg.json'
-
-      - name: Install vcpkg (for CMake)
+      - name: Install vcpkg
         if: ${{ matrix.buildtype == 'windows-release' }}
         uses: lukka/run-vcpkg@main
         with:
@@ -90,42 +82,17 @@ jobs:
       - name: Get latest CMake and Ninja
         uses: lukka/get-cmake@v3.31.6
 
-      - name: Setup MSBuild
-        if: ${{ matrix.buildtype == 'windows-debug' }}
-        uses: microsoft/setup-msbuild@v1.1
-
-      - name: Configure and Build (CMake)
+      - name: Configure and Build
         if: ${{ matrix.buildtype == 'windows-release' }}
         uses: lukka/run-cmake@main
         with:
           configurePreset: ${{ matrix.buildtype }}
           buildPreset: ${{ matrix.buildtype }}
 
-      - name: Build with MSBuild
-        if: ${{ matrix.buildtype == 'windows-debug' }}
-        shell: pwsh
-        env:
-          GITHUB_WORKSPACE: ${{ github.workspace }}
-        run: |
-          msbuild.exe vc17/otclient.sln `
-            /p:VcpkgEnableManifest=true `
-            /p:Configuration=Debug `
-            /p:Platform=x64 `
-            /p:GITHUB_WORKSPACE="$env:GITHUB_WORKSPACE" `
-            /m
-
-      - name: Upload Executable Artifact (CMake)
+      - name: Upload Executable Artifact
         if: ${{ matrix.buildtype == 'windows-release' }}
         uses: actions/upload-artifact@main
         with:
           name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
           path: |
             ${{ github.workspace }}/build/${{ matrix.buildtype }}/bin/otclient.exe
-
-      - name: Upload Executable Artifact (MSBuild)
-        if: ${{ matrix.buildtype == 'windows-debug' }}
-        uses: actions/upload-artifact@main
-        with:
-          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}-${{ github.sha }}
-          path: |
-            ${{ github.workspace }}/vc17/otclient.exe

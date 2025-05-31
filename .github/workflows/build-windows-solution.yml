@@ -1,0 +1,92 @@
+name: Build - Windows - Solution
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/**"
+  merge_group:
+  push:
+    paths:
+      - "src/**"
+    branches:
+      - main
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 2
+  MAKEFLAGS: "-j 2"
+
+jobs:
+  cancel-runs:
+    if: github.event_name == 'pull_request' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+  build:
+    name: ${{ matrix.os }}-${{ matrix.buildtype }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2022]
+        buildtype: [Debug]
+        include:
+          - os: windows-2022
+            triplet: x64-windows
+            packages: sccache
+
+    steps:
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get vcpkg commit ID
+        id: vcpkg-step
+        shell: pwsh
+        run: |
+          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $commit = $json.'builtin-baseline'
+          echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/vcpkg/archives
+            vcpkg/archives
+            vcpkg/downloads
+          key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+
+      - name: Install vcpkg
+        shell: pwsh
+        run: |
+          if (-Not (Test-Path vcpkg)) {
+            git clone https://github.com/Microsoft/vcpkg.git
+          }
+          cd vcpkg
+          git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          .\bootstrap-vcpkg.bat
+          .\vcpkg integrate install
+
+      - name: Build project
+        shell: pwsh
+        run: |
+          msbuild.exe vc17/otclient.sln `
+            /p:VcpkgEnableManifest=true `
+            /p:Configuration=${{ matrix.buildtype }} `
+            /p:Platform=x64 `
+            /m
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}
+          path: |
+            ${{ github.workspace }}/vc17/*.exe
+            ${{ github.workspace }}/vc17/*.dll
