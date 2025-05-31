@@ -70,6 +70,14 @@ jobs:
           vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
           echo "vcpkgGitCommitId=$vcpkgCommitId" >> $GITHUB_OUTPUT
 
+      - name: Compute vcpkg.json hash
+        id: hash
+        shell: pwsh
+        run: |
+          $bytes = Get-Content vcpkg.json -Raw -Encoding UTF8 | [System.Text.Encoding]::UTF8.GetBytes
+          $hash = [System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.SHA256Managed).ComputeHash($bytes)) -replace '-', ''
+          "hash=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Cache vcpkg binary artifacts
         uses: actions/cache@v4
         with:
@@ -78,7 +86,7 @@ jobs:
             ${{ github.workspace }}/vcpkg/downloads
             ${{ github.workspace }}/vcpkg/installed
             ${{ github.workspace }}/vcpkg/buildtrees
-          key: vcpkg-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          key: vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-${{ steps.hash.outputs.hash }}
           restore-keys: |
             vcpkg-${{ matrix.buildtype }}-
 

@@ -60,6 +60,14 @@ jobs:
           $commit = $json.'builtin-baseline'
           echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
 
+      - name: Compute vcpkg.json hash
+        id: hash
+        shell: pwsh
+        run: |
+          $bytes = Get-Content vcpkg.json -Raw -Encoding UTF8 | [System.Text.Encoding]::UTF8.GetBytes
+          $hash = [System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.SHA256Managed).ComputeHash($bytes)) -replace '-', ''
+          "hash=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Cache vcpkg artifacts (Windows)
         uses: actions/cache@v4
         with:
@@ -67,7 +75,7 @@ jobs:
             ${{ github.workspace }}/vcpkg/installed
             ${{ github.workspace }}/vcpkg/buildtrees
             ${{ github.workspace }}/vcpkg/downloads
-          key: vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          key: vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-${{ steps.hash.outputs.hash }}
           restore-keys: |
             vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-
 
