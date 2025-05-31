@@ -55,6 +55,15 @@ jobs:
           $commit = $json.'builtin-baseline'
           echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
 
+      - name: Install vcpkg
+        shell: bash
+        run: |
+          rm -rf vcpkg
+          git clone https://github.com/Microsoft/vcpkg.git --no-single-branch
+          cd vcpkg
+          git checkout ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          ./bootstrap-vcpkg.bat
+
       - name: Restore vcpkg cache
         uses: actions/cache@v4
         with:
@@ -65,17 +74,6 @@ jobs:
           key: vcpkg-bin-${{ matrix.buildtype }}
           restore-keys: |
             vcpkg-bin-
-
-      - name: Install vcpkg
-        shell: cmd
-        run: |
-          if not exist vcpkg (
-            git clone https://github.com/Microsoft/vcpkg.git --no-single-branch
-          )
-          cd vcpkg
-          git reset --hard ${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
-          call bootstrap-vcpkg.bat
-          call vcpkg integrate install
 
       - name: Build project
         run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
