@@ -47,6 +47,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@main
 
+      - name: Get vcpkg commit ID
+        id: vcpkg-step
+        shell: pwsh
+        run: |
+          $json = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $commit = $json.'builtin-baseline'
+          echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
+
       - name: Restore vcpkg cache
         uses: actions/cache@v4
         with:
