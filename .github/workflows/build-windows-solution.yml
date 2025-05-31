@@ -57,9 +57,6 @@ jobs:
       - name: Build project
         run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
 
-      - name: Build project
-        run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
-
       - name: Prepare artifact folder
         if: ${{ matrix.buildtype == 'Debug' }}
         shell: pwsh
