@@ -38,27 +38,44 @@ jobs:
         include:
           - os: windows-2022
             triplet: x64-windows
-            packages: >
-              sccache
+            packages: sccache
+
     steps:
       - name: Setup MSBuild.exe
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Checkout repository
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
+
+      - name: Compute vcpkg.json hash
+        id: hash
+        shell: pwsh
+        run: |
+          $bytes = Get-Content vcpkg.json -Raw -Encoding UTF8 | [System.Text.Encoding]::UTF8.GetBytes()
+          $hash = [System.BitConverter]::ToString((New-Object System.Security.Cryptography.SHA256Managed).ComputeHash($bytes)) -replace '-', ''
+          "hash=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Cache vcpkg artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}\vcpkg\installed
+            ${{ github.workspace }}\vcpkg\buildtrees
+            ${{ github.workspace }}\vcpkg\downloads
+          key: vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-${{ steps.hash.outputs.hash }}
+          restore-keys: |
+            vcpkg-${{ matrix.os }}-${{ matrix.buildtype }}-
 
       - name: Install vcpkg
         run: |
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
-          ./bootstrap-vcpkg.bat
-          ./vcpkg integrate install
+          .\bootstrap-vcpkg.bat
 
       - name: Build project
-        run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
+        run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=${{ github.workspace }}\vcpkg vc17/otclient.sln
 
       - name: Prepare artifact folder
-        if: ${{ matrix.buildtype == 'Debug' }}
         shell: pwsh
         run: |
           $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
@@ -79,10 +96,8 @@ jobs:
           }
 
       - name: Upload Executable Artifact (MSBuild)
-        if: ${{ matrix.buildtype == 'Debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}
           path: |
-            ${{ github.workspace }}/artifacts
-
+            ${{ github.workspace }}\artifacts
