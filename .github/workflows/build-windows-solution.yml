@@ -53,10 +53,11 @@ jobs:
 
     - name: Resolve manifest deps
       run: |
-        .\vcpkg.exe install --triplet x64-windows `
-            "--x-manifest-root=${{ github.workspace }}" `
+        .\vcpkg\vcpkg.exe install --triplet x64-windows `
             --feature-flags=manifests,registries
-      working-directory: vcpkg
+
+    - name: Check installed/ state
+      run: dir vcpkg\installed\x64-windows
 
     - name: MSBuild (manifest mode)
       run: msbuild.exe vc17/otclient.sln /m /p:Configuration=Debug /p:Platform=x64 /p:VcpkgEnableManifest=true /p:VcpkgRoot=${{ github.workspace }}\vcpkg
