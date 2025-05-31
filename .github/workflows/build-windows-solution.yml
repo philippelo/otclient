@@ -1,88 +1,73 @@
-name: Build - Windows - Solution
+name: Build - Windows - Solution (cached)
 
 on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/**"
-  merge_group:
+    paths: ["src/**"]
   push:
-    paths:
-      - "src/**"
-    branches:
-      - main
+    branches: [main]
+    paths: ["src/**"]
 
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 2
   MAKEFLAGS: "-j 2"
 
 jobs:
-  cancel-runs:
-    if: github.event_name == 'pull_request' && github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
-  job:
-    if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
-    name: ${{ matrix.os }}-${{ matrix.buildtype }}
-    runs-on: ${{ matrix.os }}
+  build:
+    runs-on: windows-2022
     strategy:
       matrix:
-        os: [windows-2022]
         buildtype: [Debug]
-        include:
-          - os: windows-2022
-            triplet: x64-windows
-            packages: >
-              sccache
+        triplet:  [x64-windows]
+
     steps:
-      - name: Setup MSBuild.exe
-        uses: microsoft/setup-msbuild@v1.1
+    - uses: actions/checkout@v4
+    - uses: microsoft/setup-msbuild@v1.1
 
-      - name: Checkout repository
-        uses: actions/checkout@main
+    - name: Compute vcpkg.json hash
+      id: hash
+      shell: pwsh
+      run: |
+        $bytes  = [System.Text.Encoding]::UTF8.GetBytes((Get-Content vcpkg.json -Raw))
+        $sha256 = [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
+        $hash   = [BitConverter]::ToString($sha256) -replace '-', ''
+        "hash=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Install vcpkg
-        run: |
-          git clone https://github.com/Microsoft/vcpkg.git
-          cd vcpkg
-          ./bootstrap-vcpkg.bat
-          ./vcpkg integrate install
+    - name: Cache vcpkg artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}\vcpkg\installed
+          ${{ github.workspace }}\vcpkg\buildtrees
+          ${{ github.workspace }}\vcpkg\downloads
+        key: vcpkg-${{ matrix.triplet }}-${{ steps.hash.outputs.hash }}
+        restore-keys: |
+          vcpkg-${{ matrix.triplet }}-
 
-      - name: Build project
-        run: msbuild.exe /p:VcpkgEnableManifest=true /p:Configuration=Debug /p:Platform=x64 /p:VcpkgRoot=$env:GITHUB_WORKSPACE/vcpkg vc17/otclient.sln
+    - name: Bootstrap vcpkg + install deps (manifest mode)
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        .\bootstrap-vcpkg.bat
 
-      - name: Prepare artifact folder
-        if: ${{ matrix.buildtype == 'Debug' }}
-        shell: pwsh
-        run: |
-          $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
-          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+    - name: Build solution
+      run: |
+        msbuild.exe vc17/otclient.sln `
+          /p:Configuration=${{ matrix.buildtype }} `
+          /p:Platform=x64 `
+          /p:VcpkgEnableManifest=true `
+          /p:VcpkgRoot=${{ github.workspace }}\vcpkg `
+          /m
 
-          $exePath = Get-ChildItem -Recurse -Path $env:GITHUB_WORKSPACE -Filter "otclient*.exe" | Select-Object -First 1
+    - name: Prepare & upload artifacts
+      shell: pwsh
+      run: |
+        $out = "$env:GITHUB_WORKSPACE\artifacts"
+        New-Item -ItemType Directory -Force -Path $out | Out-Null
+        Get-ChildItem -Recurse -Filter "otclient*.exe","*.dll" |
 
-          if (-not $exePath) {
-            Write-Error "Not found otclient*.exe!"
-            exit 1
-          }
-
-          Copy-Item $exePath.FullName -Destination $artifactDir
-
-          $dlls = Get-ChildItem -Path $exePath.Directory.FullName -Filter "*.dll"
-          foreach ($dll in $dlls) {
-            Copy-Item $dll.FullName -Destination $artifactDir
-          }
-
-      - name: Upload Executable Artifact (MSBuild)
-        if: ${{ matrix.buildtype == 'Debug' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: otclient-${{ matrix.os }}-${{ matrix.buildtype }}
-          path: |
-            ${{ github.workspace }}/artifacts
-
+    - uses: actions/upload-artifact@v4
+      with:
+        name: otclient-${{ matrix.buildtype }}
+        path: artifacts
