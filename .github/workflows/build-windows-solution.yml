@@ -51,7 +51,7 @@ jobs:
         cd vcpkg
         .\bootstrap-vcpkg.bat
 
-    - name: Resolve manifest deps (cria installed/)
+    - name: Resolve manifest deps
       run: |
         .\vcpkg.exe install --triplet x64-windows `
             "--x-manifest-root=${{ github.workspace }}" `
