@@ -60,7 +60,7 @@ jobs:
           $commit = $json.'builtin-baseline'
           echo "vcpkgGitCommitId=$commit" >> $env:GITHUB_OUTPUT
 
-            - name: Cache vcpkg artifacts (Windows)
+      - name: Cache vcpkg artifacts (Windows)
         uses: actions/cache@v4
         with:
           path: |

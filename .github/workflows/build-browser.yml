@@ -55,13 +55,17 @@ jobs:
           vcpkgCommitId=$(grep '.builtin-baseline' vcpkg.json | awk -F: '{print $2}' | tr -d '," ')
           echo "vcpkgGitCommitId=$vcpkgCommitId" >> $GITHUB_OUTPUT
 
-      - name: Cache vcpkg binary artifacts
+      - name: Cache full vcpkg artifacts
         uses: actions/cache@v4
         with:
-          path: ~/.cache/vcpkg/archives
-          key: vcpkg-bin-${{ matrix.buildtype }}-${{ steps.vcpkg-step.outputs.vcpkgGitCommitId }}
+          path: |
+            ~/.cache/vcpkg/archives
+            ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/buildtrees
+            ${{ github.workspace }}/vcpkg/downloads
+          key: vcpkg-${{ matrix.buildtype }}-${{ steps.hash.outputs.hash }}
           restore-keys: |
-            vcpkg-bin-${{ matrix.buildtype }}-
+            vcpkg-${{ matrix.buildtype }}-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -71,13 +75,9 @@ jobs:
       - name: Install CMake and Ninja
         uses: lukka/get-cmake@v3.31.6
 
-      - name: Cache CMake build directory
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/build-${{ matrix.buildtype }}
-          key: cmake-dir-${{ matrix.buildtype }}
-          restore-keys: |
-            cmake-dir-${{ matrix.buildtype }}
+      - name: Compute vcpkg hash
+        id: hash
+        run: echo "hash=$(sha256sum vcpkg.json | cut -d' ' -f1)" >> $GITHUB_OUTPUT
 
       - name: Configure CMake
         run: |
