@@ -608,7 +608,7 @@ elseif(WASM)
 		OpenSSL::SSL
 		OpenSSL::Crypto
 		httplib::httplib
-		fmt::fmt
+		fmt::fmt-header-only
 	)
 
 

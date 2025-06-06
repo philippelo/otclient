@@ -26,6 +26,8 @@
 
 #include <fstream>
 
+#include <fmt/format.h>
+
 struct LogMessage
 {
     LogMessage(const Fw::LogLevel level, const std::string_view message, const std::size_t when) : level(level), message(message), when(when) {}
@@ -58,73 +60,28 @@ public:
 
     // fmt-compatible overloads (for C++ only)
     template<typename... Args>
-    inline void debug(fmt::format_string<Args...> fmtStr, Args&&... args) {
+    void debug(fmt::format_string<Args...> fmtStr, Args&&... args) {
         debug(fmt::format(fmtStr, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
-    inline void info(fmt::format_string<Args...> fmtStr, Args&&... args) {
+    void info(fmt::format_string<Args...> fmtStr, Args&&... args) {
         info(fmt::format(fmtStr, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
-    inline void warning(fmt::format_string<Args...> fmtStr, Args&&... args) {
+    void warning(fmt::format_string<Args...> fmtStr, Args&&... args) {
         warning(fmt::format(fmtStr, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
-    inline void error(fmt::format_string<Args...> fmtStr, Args&&... args) {
+    void error(fmt::format_string<Args...> fmtStr, Args&&... args) {
         error(fmt::format(fmtStr, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
-    inline void fatal(fmt::format_string<Args...> fmtStr, Args&&... args) {
+    void fatal(fmt::format_string<Args...> fmtStr, Args&&... args) {
         fatal(fmt::format(fmtStr, std::forward<Args>(args)...));
-    }
-
-    template<typename... Args>
-    inline void fine(fmt::format_string<Args...> fmtStr, Args&&... args) {
-        fine(fmt::format(fmtStr, std::forward<Args>(args)...));
-    }
-
-    inline void trace() {
-        logFunc(Fw::LogDebug, "", __PRETTY_FUNCTION__);
-    }
-
-    template<typename... Args>
-    inline void traceDebug(fmt::format_string<Args...> fmtStr, Args&&... args) {
-        logFunc(Fw::LogDebug, fmt::format(fmtStr, std::forward<Args>(args)...), __PRETTY_FUNCTION__);
-    }
-
-    inline void traceDebug(std::string_view what) {
-        logFunc(Fw::LogDebug, what, __PRETTY_FUNCTION__);
-    }
-
-    template<typename... Args>
-    inline void traceInfo(fmt::format_string<Args...> fmtStr, Args&&... args) {
-        logFunc(Fw::LogInfo, fmt::format(fmtStr, std::forward<Args>(args)...), __PRETTY_FUNCTION__);
-    }
-
-    inline void traceInfo(std::string_view what) {
-        logFunc(Fw::LogInfo, what, __PRETTY_FUNCTION__);
-    }
-
-    template<typename... Args>
-    inline void traceWarning(fmt::format_string<Args...> fmtStr, Args&&... args) {
-        logFunc(Fw::LogWarning, fmt::format(fmtStr, std::forward<Args>(args)...), __PRETTY_FUNCTION__);
-    }
-
-    inline void traceWarning(std::string_view what) {
-        logFunc(Fw::LogWarning, what, __PRETTY_FUNCTION__);
-    }
-
-    template<typename... Args>
-    inline void traceError(fmt::format_string<Args...> fmtStr, Args&&... args) {
-        logFunc(Fw::LogError, fmt::format(fmtStr, std::forward<Args>(args)...), __PRETTY_FUNCTION__);
-    }
-
-    inline void traceError(std::string_view what) {
-        logFunc(Fw::LogError, what, __PRETTY_FUNCTION__);
     }
 
     void fireOldMessages();
